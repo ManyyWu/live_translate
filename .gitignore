@@ -13,3 +13,6 @@ __pycache__/
 /revisions.jsonl
 /whisper.log
 /proxy.log
+
+# scripts
+/start.sh
