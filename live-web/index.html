@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>实时翻译</title><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%0A%20%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%0A%20%20width%3D%2224%22%0A%20%20height%3D%2224%22%0A%20%20viewBox%3D%220%200%2024%2024%22%0A%20%20fill%3D%22none%22%0A%20%20stroke%3D%22%23226b4c%22%0A%20%20stroke-width%3D%222%22%0A%20%20stroke-linecap%3D%22round%22%0A%20%20stroke-linejoin%3D%22round%22%0A%3E%0A%20%20%3Cpath%20d%3D%22M16.247%207.761a6%206%200%200%201%200%208.478%22%20%2F%3E%0A%20%20%3Cpath%20d%3D%22M19.075%204.933a10%2010%200%200%201%200%2014.134%22%20%2F%3E%0A%20%20%3Cpath%20d%3D%22M4.925%2019.067a10%2010%200%200%201%200-14.134%22%20%2F%3E%0A%20%20%3Cpath%20d%3D%22M7.753%2016.239a6%206%200%200%201%200-8.478%22%20%2F%3E%0A%20%20%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%222%22%20%2F%3E%0A%3C%2Fsvg%3E"><link rel="stylesheet" href="/style.css"></head>
+<body><header><div><span class="eyebrow">LIVE TRANSLATE · 本地服务</span><h1><svg aria-hidden="true"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="#226b4c"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M16.247 7.761a6 6 0 0 1 0 8.478" />
+  <path d="M19.075 4.933a10 10 0 0 1 0 14.134" />
+  <path d="M4.925 19.067a10 10 0 0 1 0-14.134" />
+  <path d="M7.753 16.239a6 6 0 0 1 0-8.478" />
+  <circle cx="12" cy="12" r="2" />
+</svg>实时翻译</h1></div><span id="connection" role="status">连接中…</span></header>
+<main><section class="controls" aria-label="语音设置"><label class="voice">语音<select id="voice"></select></label><label>倍速 <output id="rateValue">1×</output><input id="rate" type="range" min="0.5" max="1.5" step="0.1" value="1"></label><label>音量 <output id="volumeValue">100%</output><input id="volume" type="range" min="0" max="1" step="0.05" value="1"></label><div class="buttons"><button id="listen">开启实时朗读</button><button id="history" class="secondary">朗读全部稳定译文</button><button id="test" class="secondary">试听</button></div><span id="speechStatus" role="status" hidden></span><details id="voiceDebug" hidden><summary>语音诊断</summary><button id="reloadVoices" class="secondary">重新加载语音</button><pre id="voiceDetails"></pre></details></section>
+<section class="transcript"><div class="section-title"><h2>中英文本</h2><span id="count">0 句</span></div><div id="items" aria-live="off"></div><p id="empty">等待语音识别结果…</p></section></main><script src="/app.js"></script></body></html>

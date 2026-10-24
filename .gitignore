@@ -1,0 +1,14 @@
+# macOS / Python caches
+.DS_Store
+__pycache__/
+
+# Local Whisper source, compiled executables and model weights
+/whisper.cpp/
+/bin/
+/models/
+
+# Runtime transcripts and logs
+/output.txt
+/log.jsonl
+/revisions.jsonl
+/whisper.log
