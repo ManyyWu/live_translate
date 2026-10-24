@@ -540,6 +540,8 @@ def run_environment_checks():
 
 if __name__ == '__main__':
     # Direct execution always runs unit tests, actual HTTP/SSE tests and real dependencies.
-    result = unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__]))
+    suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
+    suite.addTests(unittest.defaultTestLoader.discover(str(Path(__file__).resolve().parent / 'reverse_proxy'), pattern='test_*.py', top_level_dir=str(Path(__file__).resolve().parent)))
+    result = unittest.TextTestRunner(verbosity=2).run(suite)
     environment_ok = run_environment_checks()
     sys.exit(0 if result.wasSuccessful() and environment_ok else 1)

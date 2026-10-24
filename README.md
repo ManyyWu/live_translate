@@ -9,6 +9,7 @@
 | 文档 | 内容 |
 |---|---|
 | [安装与音频采集](whisper.md) | 环境准备、编译 Whisper、下载模型、配置 BlackHole、验证采集 |
+| [远端反向代理（可选）](reverse_proxy/README.md) | 通过 SSH 隧道从远端访问 |
 | [运行与参数](live_translate.md) | 启动命令、模型选择、输出文件、网页语音、同步规则、测试与排错 |
 
 ## 开始使用
@@ -26,6 +27,102 @@ python3 live_translate.py --events --web
 默认使用 `models/ggml-tiny.en.bin`、CPU 9 线程、采集设备 #2。BlackHole 编号不同可添加 `--capture 编号`；具体查询方法见[采集设备检查](whisper.md#检查实时采集)。
 
 本机打开 `http://127.0.0.1:8765`，局域网其他设备打开 `http://Mac的局域网IP:8765`。在网页选择中文声音，点击“开启实时朗读”。历史内容只显示，不会自动播放。
+
+## 命令示例
+
+以下示例任选一条运行。默认使用 tiny.en、CPU 9 线程、采集设备 #2；稳定结果追加到 `output.txt`，Whisper 诊断写入 `whisper.log`。`--events` 额外开启事件日志，不加则不记录。
+
+### 仅终端
+
+```bash
+# 英文识别 + 中文翻译，保存稳定结果
+python3 live_translate.py
+
+# 只识别英文，不调用翻译
+python3 live_translate.py --no-translate
+
+# 终端翻译，不保存结果文件（仍有 Whisper 诊断日志）
+python3 live_translate.py --no-output
+```
+
+### 网页与朗读
+
+```bash
+# 本机及局域网网页，保存稳定结果
+python3 live_translate.py --web
+
+# 网页 + 事件日志，便于排查文本修订和翻译问题
+python3 live_translate.py --web --events
+
+# 网页仅允许本机访问
+python3 live_translate.py --web --host 127.0.0.1
+```
+
+本机访问 `http://127.0.0.1:8765`；局域网访问 `http://Mac的局域网IP:8765`。中文朗读需在网页中手动开启。`--no-translate` 不能与网页或远端访问同时使用。
+
+### 模型与输出
+
+```bash
+# 使用 base.en，通常准确率更高、耗时更多；需已下载模型
+python3 live_translate.py -m models/ggml-base.en.bin --capture 2 --threads 9 --web
+
+# 自定义结果和日志路径
+python3 live_translate.py --web --output result.txt --events session.jsonl --log whisper-session.log
+```
+
+`--capture` 填写实际 BlackHole 编号，`--threads` 控制 Whisper 计算线程数。
+
+### 服务器反向代理（可选）
+
+本机和局域网使用无需反代。已有远端反代入口时执行：
+
+```bash
+# 远端访问，自动启用网页，保存稳定结果
+python3 live_translate.py --proxy-host 你的IP
+
+# 远端访问 + 事件日志
+python3 live_translate.py --proxy-host 你的IP --events
+```
+
+浏览器访问 `https://你的反代域名/`。`你的IP` 可替换为 SSH 别名或 `用户@服务器IP`。仅需远端访问、不开放本机局域网入口时，可加 `--host 127.0.0.1`。
+
+### 参数示例
+
+精简版：
+
+```bash
+python3 live_translate.py \
+  --model models/ggml-base.en.bin \
+  --capture 2 \
+  --threads 9 \
+  --web \
+  --port 8765 \
+  --proxy-host 你的IP \
+  --proxy-tunnel-port 18765
+```
+
+完整版，自定义识别、翻译、局域网网页、远端访问及日志：
+
+```bash
+python3 live_translate.py \
+  --binary bin/whisper-stream \
+  --model models/ggml-base.en.bin \
+  --capture 2 \
+  --threads 9 \
+  --web \
+  --host 0.0.0.0 \
+  --port 8765 \
+  --proxy-host 你的IP \
+  --proxy-tunnel-port 18765 \
+  --proxy-log proxy.log \
+  --output output.txt \
+  --events log.jsonl \
+  --log whisper.log \
+  --translation-workers 4 \
+  --batch-wait-ms 50
+```
+
+仅本机和局域网使用时，删除三个 `--proxy-*` 参数即可。更多说明见[运行与参数](live_translate.md)和[远端访问指南](reverse_proxy/README.md)。
 
 ## 主要功能
 

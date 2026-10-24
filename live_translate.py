@@ -22,6 +22,7 @@ import sys
 import unicodedata
 import threading
 import uuid
+import socket
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 
@@ -632,6 +633,26 @@ class Transcript:
         self.latest = self.carry = ''
 
 
+def lan_address():
+    """获取默认路由使用的本机 IPv4；UDP connect 仅选路，不发送数据。"""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+            probe.connect(('192.0.2.1', 80))
+            address = probe.getsockname()[0]
+            if address != '0.0.0.0' and not address.startswith('127.'):
+                return address
+    except OSError:
+        pass
+    try:
+        for info in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET):
+            address = info[4][0]
+            if address != '0.0.0.0' and not address.startswith(('127.', '169.254.')):
+                return address
+    except OSError:
+        pass
+    return None
+
+
 def main():
     """解析参数，启动 Whisper 与可选 HTTP 服务，并统一管理退出和资源清理。"""
     root = Path(__file__).resolve().parent
@@ -653,7 +674,23 @@ def main():
     ap.add_argument('--web', action='store_true', help='enable local HTTP client')
     ap.add_argument('--host', default='0.0.0.0', help='HTTP bind address')
     ap.add_argument('--port', type=int, default=8765, help='HTTP port')
+    ap.add_argument('--proxy-host', help='SSH host alias, e.g. remote-host; enables --web and reverse tunnel')
+    ap.add_argument('--proxy-tunnel-port', type=int, default=18765, help='remote loopback SSH tunnel port')
+    ap.add_argument('--proxy-log', type=Path, default=root / 'proxy.log', help='SSH tunnel log')
     args = ap.parse_args()
+    if args.proxy_host:
+        args.web = True
+        if args.host not in ('0.0.0.0', '127.0.0.1', 'localhost') or args.port == 0:
+            ap.error('--proxy-host requires a loopback-accessible HTTP host and a fixed port')
+        if args.proxy_tunnel_port == args.port:
+            ap.error('local HTTP port and remote tunnel port must differ')
+        if not shutil.which('ssh'):
+            ap.error('ssh executable not found')
+        from reverse_proxy.tunnel import ssh_command
+        try:
+            ssh_command(args.proxy_host, args.port, args.proxy_tunnel_port)
+        except ValueError as exc:
+            ap.error(str(exc))
     if args.threads < 1:
         ap.error('threads must be positive')
     if not 0 <= args.port <= 65535:
@@ -682,7 +719,11 @@ def main():
         display_host = '127.0.0.1' if args.host == '0.0.0.0' else args.host
         print(f'Web client: http://{display_host}:{server.server_port} (listening on {args.host})', file=sys.stderr)
         if args.host == '0.0.0.0':
-            print(f'LAN client: http://<computer LAN IP>:{server.server_port}', file=sys.stderr)
+            address = lan_address()
+            if address:
+                print(f'LAN client: http://{address}:{server.server_port}', file=sys.stderr)
+            else:
+                print('LAN client: unable to detect local IPv4 address', file=sys.stderr)
     output_file = None
     if not args.no_output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -708,7 +749,14 @@ def main():
     # UTF-8 多字节字符可能被管道读取拆开，不能逐块直接 decode。
     decoder = codecs.getincrementaldecoder('utf-8')('replace')
     process = None
+    tunnel = None
     try:
+        if args.proxy_host:
+            from reverse_proxy.tunnel import ReverseTunnel
+            tunnel = ReverseTunnel(args.proxy_host, server.server_port,
+                                   args.proxy_tunnel_port, args.proxy_log)
+            tunnel.start()
+            print(f'Remote proxy: SSH {args.proxy_host}, remote loopback port {args.proxy_tunnel_port} -> local HTTP {args.port}; log: {args.proxy_log}', file=sys.stderr)
         if args.replay:
             with args.replay.open('rb') as source:
                 while data := source.read(4096):
@@ -740,6 +788,9 @@ def main():
     except KeyboardInterrupt:
         return 130
     finally:
+        # 进入退出流程就停止重连，避免等待翻译结束期间又建立新隧道。
+        if tunnel:
+            tunnel.close()
         # 先中断、再终止、最后强制结束整个子进程组，避免退出后残留录音进程。
         if process:
             if process.poll() is None:

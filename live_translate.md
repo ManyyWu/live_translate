@@ -31,6 +31,9 @@ python3 live_translate.py -m models/ggml-base.en.bin --capture 2 --events --web
 | `--web` | 开启 HTTP 网页 | 关闭 |
 | `--host 地址` | HTTP 监听地址 | `0.0.0.0` |
 | `--port 端口` | HTTP 端口 | `8765` |
+| `--proxy-host 主机` | 连接 SSH 别名建立反向隧道，自动启用网页 | 关闭 |
+| `--proxy-tunnel-port 端口` | 远端回环隧道端口 | `18765` |
+| `--proxy-log 路径` | SSH 日志，追加写入 | `proxy.log` |
 | `--output 路径` | 追加保存最终稳定文本 | `output.txt` |
 | `--no-output` | 禁用结果文件 | — |
 | `--events [路径]` | 开启 JSONL 事件日志，覆盖写入 | 开启且不指定路径时为 `log.jsonl` |
@@ -146,3 +149,13 @@ node --test test_live_web.cjs
 | 手机无法访问 | 使用 Mac 局域网 IP，确认同网段、监听地址和防火墙设置 |
 | 手机没有声音选项 | 展开语音诊断，查看手机浏览器返回的声音；检查系统中文 TTS |
 | 中文又被识别 | 分离 TTS 与 BlackHole 路由，或改用另一台设备朗读 |
+
+## 远端访问（可选）
+
+本机和局域网使用无需反代。已有远端反代入口时，添加 `--proxy-host 你的IP` 即可同时启用网页和 SSH 反向隧道：
+
+```bash
+python3 live_translate.py --proxy-host 你的IP --events
+```
+
+浏览器访问 `https://你的反代域名/`。`--host` 仍是本机监听地址，不能用它指定远端主机。更多参数见[远端访问指南](reverse_proxy/README.md)。

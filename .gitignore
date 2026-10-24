@@ -12,3 +12,4 @@ __pycache__/
 /log.jsonl
 /revisions.jsonl
 /whisper.log
+/proxy.log
