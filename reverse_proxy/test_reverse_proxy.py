@@ -89,6 +89,41 @@ class TunnelTests(unittest.TestCase):
             tunnel.close()
             self.assertTrue(stopped.is_set())
             self.assertFalse(tunnel.thread.is_alive())
+            self.assertNotIn('retry', (Path(directory) / 'proxy.log').read_text())
+
+    def test_unexpected_ssh_exit_is_logged_and_retried(self):
+        reconnected, stopped = threading.Event(), threading.Event()
+        processes = []
+        class Process:
+            def __init__(self, *args, **kwargs):
+                processes.append(self)
+                self.first = len(processes) == 1
+                if not self.first:
+                    reconnected.set()
+            def wait(self, timeout=None):
+                if self.first:
+                    return 255
+                stopped.wait(timeout)
+                return 0
+            def poll(self):
+                return 255 if self.first else (0 if stopped.is_set() else None)
+            def terminate(self):
+                stopped.set()
+            def kill(self):
+                stopped.set()
+        with tempfile.TemporaryDirectory() as directory, patch('reverse_proxy.tunnel.subprocess.Popen', Process):
+            log = Path(directory) / 'proxy.log'
+            tunnel = ReverseTunnel('remote-host', 8765, 18765, log)
+            tunnel.start()
+            try:
+                self.assertTrue(reconnected.wait(3), 'SSH did not reconnect after unexpected exit')
+                self.assertEqual(len(processes), 2)
+                self.assertIn('SSH exited (255); retry in 1s', log.read_text())
+            finally:
+                tunnel.close()
+            self.assertTrue(stopped.is_set())
+            self.assertFalse(tunnel.thread.is_alive())
+            self.assertNotIn('SSH exited (0)', log.read_text())
 
     def test_nginx_config_sse_and_port_validation(self):
         script = Path(__file__).with_name('install.sh')

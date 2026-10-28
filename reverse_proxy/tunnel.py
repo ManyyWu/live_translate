@@ -44,6 +44,8 @@ class ReverseTunnel:
                             break
                         self.process = subprocess.Popen(self.command, stdout=log, stderr=log)
                     code = self.process.wait()
+                    if self.stopping.is_set():
+                        break
                     log.write(f'SSH exited ({code}); retry in {delay}s\n')
                     log.flush()
                 except OSError as exc:
